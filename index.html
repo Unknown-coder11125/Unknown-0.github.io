@@ -1,11 +1,72 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>내 홈페이지</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오늘의 뉴스 정리</title>
+<style>
+:root{--bg:#f2f5f7;--ink:#14202b;--sub:#5d6b78;--line:#d5dde3;--accent:#0f766e}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1519;--ink:#e6edf1;--sub:#92a2ae;--line:#26343d;--accent:#5eead4}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 "Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:40px 18px 72px}
+h1{font-size:1.7rem;letter-spacing:-.02em;margin:0 0 4px}
+#meta{color:var(--sub);font-size:.88rem;margin-bottom:22px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+nav button{border:0;border-bottom:2px solid transparent;background:none;color:var(--sub);padding:6px 10px;font:inherit;font-size:.92rem;cursor:pointer}
+nav button.on{color:var(--ink);border-color:var(--accent);font-weight:600}
+nav button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font-size:.95rem;color:var(--accent);margin:30px 0 4px}
+article{padding:14px 0;border-bottom:1px solid var(--line)}
+.t{color:var(--ink);font-weight:600;text-decoration:none}
+.t:hover{text-decoration:underline}
+article p{margin:4px 0 6px;font-size:.95rem}
+.src{color:var(--sub);font-size:.82rem}
+.src a{color:var(--accent);margin-left:8px}
+footer{color:var(--sub);font-size:.8rem;margin-top:36px}
+</style>
 </head>
 <body>
-    <h1>환영합니다!</h1>
-    <p>깃허브 페이지로 만든 내 홈페이지입니다.</p>
+<main>
+<h1>오늘의 뉴스 정리</h1>
+<div id="meta">불러오는 중...</div>
+<nav id="tabs"></nav>
+<div id="list"></div>
+<footer>요약은 AI가 기사 제목과 발췌문을 보고 작성해 부정확할 수 있습니다. 기사 저작권은 각 언론사에 있으며, 정확한 내용은 원문에서 확인하세요.</footer>
+</main>
+<script>
+let data, current = "전체";
+const $ = id => document.getElementById(id);
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+function link(a, url){ if (/^https?:\/\//.test(url)) { a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer"; } }
+function render(){
+  const list = $("list"); list.replaceChildren();
+  data.categories.filter(c => current === "전체" || c.name === current).forEach(c => {
+    if (!c.items.length) return;
+    list.append(el("h2", null, c.name));
+    c.items.forEach(x => {
+      const a = el("article"), t = el("a", "t", x.title); link(t, x.link);
+      a.append(t);
+      if (x.summary) a.append(el("p", null, x.summary));
+      const s = el("div", "src", x.source + (x.published ? "  " + x.published : ""));
+      const g = el("a", null, "원문 보기"); link(g, x.link);
+      s.append(g); a.append(s); list.append(a);
+    });
+  });
+}
+function tabs(){
+  const nav = $("tabs"); nav.replaceChildren();
+  ["전체", ...data.categories.map(c => c.name)].forEach(n => {
+    const b = el("button", n === current ? "on" : "", n);
+    b.onclick = () => { current = n; tabs(); render(); };
+    nav.append(b);
+  });
+}
+fetch("data/news.json?t=" + Date.now()).then(r => r.json()).then(d => {
+  data = d;
+  $("meta").textContent = d.categories.length ? "마지막 업데이트 " + d.updated : "아직 데이터가 없습니다. GitHub Actions에서 Update news를 실행하세요.";
+  tabs(); render();
+}).catch(() => { $("meta").textContent = "뉴스 데이터를 불러오지 못했습니다. data/news.json 파일을 확인하세요."; });
+</script>
 </body>
 </html>
